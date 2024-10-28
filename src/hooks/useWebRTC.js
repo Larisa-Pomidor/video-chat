@@ -44,6 +44,8 @@ export default function useWebRTC(roomID) {
             peerConnection.current[peerID].ontrack = ({ streams: [remoteStream] }) => {
                 trackNumber++;
 
+                console.log(remoteStream);
+
                 if (trackNumber === 2) { // video & audio tracks received
                     addNewClient(peerID, () => {
                         peerMediaElements.current[peerID].srcObject = remoteStream;
