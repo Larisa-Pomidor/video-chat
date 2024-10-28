@@ -40,18 +40,29 @@ export default function useWebRTC(roomID) {
                 }
             }
 
-            let trackNumber = 0;
-            peerConnection.current[peerID].ontrack = ({ streams: [remoteStream] }) => {
-                trackNumber++;
+            let videoTrackReceived = false;
+            let audioTrackReceived = false;
 
-                console.log(remoteStream);
+            peerConnection.current[peerID].ontrack = ({ track, streams: [remoteStream] }) => {
+                console.log('Track received:', track.kind, remoteStream);
 
-                if (trackNumber === 2) { // video & audio tracks received
+                if (track.kind === 'video') {
+                    videoTrackReceived = true;
+                } else if (track.kind === 'audio') {
+                    audioTrackReceived = true;
+                }
+
+                // If both tracks are received, proceed to add the client
+                if (videoTrackReceived && audioTrackReceived) {
                     addNewClient(peerID, () => {
-                        peerMediaElements.current[peerID].srcObject = remoteStream;
+                        if (peerMediaElements.current[peerID]) {
+                            peerMediaElements.current[peerID].srcObject = remoteStream;
+                        } else {
+                            console.error(`Video element not found for peer ${peerID}`);
+                        }
                     });
                 }
-            }
+            };
 
             localMediaStream.current.getTracks().forEach(track => {
                 peerConnection.current[peerID].addTrack(track, localMediaStream.current);
