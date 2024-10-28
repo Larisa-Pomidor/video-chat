@@ -8,11 +8,11 @@ const { version, validate } = require('uuid')
 
 const PORT = process.env.PORT || 3001;
 
-// app.use(express.static(path.join(__dirname, 'build'))); 
+app.use(express.static(path.join(__dirname, 'build'))); 
 
-// app.get('*', (req, res) => {
-//   res.sendFile(path.join(__dirname, 'build', 'index.html'));
-// });
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
 
 function getClientRooms() {
     const { rooms } = io.sockets.adapter;
