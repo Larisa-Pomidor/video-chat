@@ -52,11 +52,18 @@ export default function useWebRTC(roomID) {
                     audioTrackReceived = true;
                 }
 
-                // If both tracks are received, proceed to add the client
+                // Proceed to add the client only when both tracks are received
                 if (videoTrackReceived && audioTrackReceived) {
                     addNewClient(peerID, () => {
-                        if (peerMediaElements.current[peerID]) {
-                            peerMediaElements.current[peerID].srcObject = remoteStream;
+                        const videoElement = peerMediaElements.current[peerID];
+                        if (videoElement) {
+                            // Set the source of the video element to the remote stream
+                            videoElement.srcObject = remoteStream;
+
+                            // Optionally, unmute video and audio if needed
+                            videoElement.muted = false;
+                            videoElement.autoplay = true;
+                            videoElement.playsInline = true;
                         } else {
                             console.error(`Video element not found for peer ${peerID}`);
                         }
