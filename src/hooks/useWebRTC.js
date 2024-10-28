@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 import ACTIONS from '../socket/actions';
 import socket from '../socket';
 import useStateWithCallback from './useStateWithCallback';
@@ -8,6 +8,8 @@ export const LOCAL_VIDEO = 'LOCAL_VIDEO';
 
 export default function useWebRTC(roomID) {
     const [clients, updateClients] = useStateWithCallback([]);
+    const [messages, setMessages] = useState([]); // State for messages
+    const [newMessage, setNewMessage] = useState(''); // State for new message input
 
     const addNewClient = useCallback((newClient, cb) => {
         if (!clients.includes(newClient)) {
@@ -85,6 +87,10 @@ export default function useWebRTC(roomID) {
                     sessionDescription: offer
                 });
             }
+
+            socket.on(ACTIONS.MESSAGE, (msg) => {
+                setMessages(prevMessages => [...prevMessages, msg]);
+            });
         }
 
         socket.on(ACTIONS.ADD_PEER, handleNewPeer);
@@ -173,8 +179,18 @@ export default function useWebRTC(roomID) {
         peerMediaElements.current[id] = node;
     }, []);
 
+    const sendMessage = (message) => {
+        const msg = { id: socket.id, msg: message }; 
+        socket.emit(ACTIONS.MESSAGE, msg); 
+        setNewMessage('');
+    };
+
     return {
         clients,
-        provideMediaRef
+        provideMediaRef,
+        messages, 
+        sendMessage, 
+        newMessage, 
+        setNewMessage
     };
 }

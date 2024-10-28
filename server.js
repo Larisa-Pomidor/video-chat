@@ -8,10 +8,10 @@ const { version, validate } = require('uuid')
 
 const PORT = process.env.PORT || 3001;
 
-app.use(express.static(path.join(__dirname, 'build'))); 
+app.use(express.static(path.join(__dirname, 'build')));
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 function getClientRooms() {
@@ -27,6 +27,7 @@ function shareRoomInfo() {
 
 // When a client connects, a new socket instance is created to handle communication with that specific client.
 io.on('connection', socket => {
+    console.log(`Client connected: ${socket.id}`);
     shareRoomInfo();
 
     socket.on(ACTIONS.JOIN, config => {
@@ -88,19 +89,35 @@ io.on('connection', socket => {
     socket.on(ACTIONS.LEAVE, leaveRoom);
     socket.on('disconnecting', leaveRoom);
 
-    socket.on(ACTIONS.RELAY_SDP, ({peerID, sessionDescription}) => {
+    socket.on(ACTIONS.RELAY_SDP, ({ peerID, sessionDescription }) => {
         io.to(peerID).emit(ACTIONS.SESSION_DESCRIPTION, {
             peerID: socket.id,
             sessionDescription
         });
     });
 
-    socket.on(ACTIONS.RELAY_ICE, ({peerID, iceCandidate}) => {
+    socket.on(ACTIONS.RELAY_ICE, ({ peerID, iceCandidate }) => {
         io.to(peerID).emit(ACTIONS.ICE_CANDIDATE, {
             peerID: socket.id,
             iceCandidate
         })
     })
+
+    socket.on(ACTIONS.MESSAGE, (msg) => {
+
+        const { rooms } = socket;
+
+        Array.from(rooms)
+            .filter(roomID => validate(roomID) && version(roomID) === 4)
+            .forEach(roomID => {
+                const clients = Array.from(io.sockets.adapter.rooms.get(roomID) || []);
+
+                clients
+                    .forEach(clientID => {
+                        io.to(clientID).emit(ACTIONS.MESSAGE, msg);
+                    });
+            });
+    });
 })
 
 server.listen(PORT, () => {

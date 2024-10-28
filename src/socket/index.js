@@ -9,6 +9,7 @@ const options = {
 
 console.log(process.env.REACT_APP_SOCKET_URL)
 
-const socket = io(process.env.REACT_APP_SOCKET_URL || 'wss://video-chat-s8mc.onrender.com', options);
+// const socket = io(process.env.REACT_APP_SOCKET_URL || 'wss://video-chat-s8mc.onrender.com', options);
+const socket = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001/', options);
 
 export default socket;
