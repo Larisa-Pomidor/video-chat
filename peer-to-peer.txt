@@ -1,0 +1,107 @@
+To establish a peer-to-peer WebRTC connection between Mozilla and Edge (Chrome returns an empty list of ICE candidates).
+The connection is directly between two browsers without using a server.
+WebRTC transports its data over UDP (transport protocol) - faster and less reliable than TCP.
+UDP never validate the data. Means that the user could receive corrupted dates or files.
+
+At first, we should take care of the setting the connection between two browsers. 
+
+An ICE candidate is a oublic IP address and port that are used to recieve the data.
+
+________________________________________________________
+
+Peer A (Mozilla) - Initiator
+
+1. Create RTCPeerConnection
+const peerConnection = new RTCPeerConnection();
+
+2. Create Data Channel
+const dataChannel = peerConnection.createDataChannel('test');
+
+dataChannel.onopen = () => console.log("Channel is open");
+dataChannel.onmessage = e => console.log('Message:', e.data);
+
+3. Gather ICE candidates
+let iceCandidates = [];
+
+peerConnection.onicecandidate = event => {
+  if (event.candidate) {
+    // Collect ICE candidates to send to Peer B
+    iceCandidates.push(event.candidate);
+  } else {
+    // ICE gathering is complete
+    console.log('All ICE candidates have been gathered.');
+    // At this point, exchange SDP offer and ICE candidates with Peer B
+    console.log('SDP Offer:', JSON.stringify(peerConnection.localDescription));
+    console.log('ICE Candidates:', JSON.stringify(iceCandidates));
+  }
+};
+
+4. Create SDP Offer
+const offer = await peerConnection.createOffer();
+await peerConnection.setLocalDescription(offer);
+
+________________________________________________________
+
+Peer B (Edge) - Receiver
+
+1. Create RTCPeerConnection
+const peerConnection = new RTCPeerConnection();
+
+let dataChannel;
+
+peerConnection.ondatachannel = event => {
+  dataChannel = event.channel;
+  dataChannel.onopen = () => console.log('Channel is open');
+  dataChannel.onmessage = e => console.log('Message:', e.data);
+};
+
+2. Gather ICE candidates
+let iceCandidates = [];
+
+peerConnection.onicecandidate = event => {
+  if (event.candidate) {
+    // Collect ICE candidates to send to Peer A
+    iceCandidates.push(event.candidate);
+  } else {
+    // ICE gathering is complete
+    console.log('All ICE candidates have been gathered.');
+    // At this point, exchange SDP answer and ICE candidates with Peer A
+    console.log('SDP Answer:', JSON.stringify(peerConnection.localDescription));
+    console.log('ICE Candidates:', JSON.stringify(iceCandidates));
+  }
+};
+
+3. Receive SDP Offer from Peer A
+const offer = /* Paste SDP Offer from Peer A */;
+await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+4. Create SDP Answer
+const answer = await peerConnection.createAnswer();
+await peerConnection.setLocalDescription(answer);
+
+________________________________________________________
+
+Peer A (Mozilla)
+
+1. Set Remote Description (SDP Answer from Peer B)
+const answer = /* Paste SDP Answer from Peer B */;
+await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+
+2. Add ICE Candidates from Peer B
+const remoteIceCandidates = /* Paste ICE Candidates from Peer B */;
+remoteIceCandidates.forEach(candidate => {
+  peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+});
+
+________________________________________________________
+
+# I found this step redundant
+
+const remoteIceCandidates = /* Paste ICE Candidates from Peer A */;
+remoteIceCandidates.forEach(candidate => {
+  peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+});
+
+________________________________________________________
+
+dataChannel.send('Hello from Chrome!');
